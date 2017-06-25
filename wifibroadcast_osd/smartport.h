@@ -4,7 +4,8 @@
 #include "telemetry.h"
 
 void smartport_read(telemetry_data_t *td, uint8_t *buf, int buflen);
-void smartport_check(telemetry_data_t *td);
+uint8_t u8CheckCrcSPORT( tSPortData *tel )
+void smartport_check(telemetry_data_t *td, tSPortData *tel);
 
 // Frsky-specific
 #define START_STOP                  0x7e

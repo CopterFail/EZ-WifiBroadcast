@@ -43,6 +43,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ltm.h"
 #elif defined(MAVLINK)
 #include "mavlink.h"
+#elif defined(SMARTPORT)
+#include "smartport.h"
 #endif
 #include "render.h"
 #include <sys/types.h>
@@ -106,6 +108,8 @@ int main(int argc, char *argv[]) {
 			ltm_read(&td, buf, n);
 #elif defined(MAVLINK)
 			mavlink_read(&td, buf, n);
+#elif defined(SMARTPORT)
+			smartport_read(&td, buf, n);
 #endif
 		}
 		// start rendering
