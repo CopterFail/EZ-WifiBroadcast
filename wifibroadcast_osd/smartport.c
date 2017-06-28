@@ -12,7 +12,7 @@ void smartport_read(telemetry_data_t *td, uint8_t *buf, int buflen)
 {
     static uint8_t s = 0; 
     static uint8_t e = 0; 
-    static tSPortData tel;
+    static tBuffer[7];
 
     uint8_t b;
     
@@ -35,71 +35,81 @@ void smartport_read(telemetry_data_t *td, uint8_t *buf, int buflen)
 		{
 			if( b==DATA_FRAME )
 			{
-				s = 1;
+				s++;
 			}
 		}
-		else if( s<8 )
+		else if( s<=6 )
 		{
-			tel.b[s-1] = b;
+			tBuffer[s-1]=b;
 			s++;
 		}
-
-		if( s>=8 )
+		else
 		{
-			s = 0;
-			if( u8CheckCrcSPORT(&tel) )
+			tBuffer[6]=b;
+			if( u8CheckCrcSPORT(tBuffer) )
 			{
-				if( u8DecodeSPORT(&tel) )
+				if( u8DecodeSPORT(tBuffer) )
 					u32Counter++;
 			}
+			s=0;
 		}
     }
 
 }
 
-uint8_t u8CheckCrcSPORT( tSPortData *tel )
+bool u8CheckCrcSPORT( uint8_t *b )
 {
     uint16_t u16Crc = DATA_FRAME;
-    uint8_t res;
+    bool res;
     
     for( int i=0; i<6; i++ )
     {   
-        u16Crc += tel->b[i];
+        u16Crc += b[i];
         u16Crc += u16Crc >> 8;  
         u16Crc &= 0x00ff;
     }
-    res = ((uint8_t)(0xFF-u16Crc) == (uint8_t)tel->b[6]) ? 1 : 0;
-    if( res == 0 )
-    	printf( "crc %x - %x", (uint8_t)(0xFF-u16Crc), (uint8_t)tel->b[6]  );
+    res = ((uint8_t)(0xFF-u16Crc) == b[6]);
+    if( !res )
+    	printf( "smartport crc fail (%x != %x)", (uint8_t)(0xFF-u16Crc), b[6]  );
     return res;
 }
  
-void smartport_check(telemetry_data_t *td, tSPortData *tel)
+void smartport_check(telemetry_data_t *td, uint8_t *b)
 {
-    switch( (uint16_t)tel->d.id ){
+    tSPortData tel;
+    tel.id        = (uint16_t)b[0] + ((uint16_t)b[1]) << 8;
+    tel.data.b[0] = b[2];
+    tel.data.b[1] = b[3];
+    tel.data.b[2] = b[4];
+    tel.data.b[3] = b[5];
+    tel.crc       = b[6];
+
+    switch( (uint16_t)tel.id ){
         case FR_ID_VFAS:
             // uint32_t , 100=10V
-            u16UavBatt2 = tel->d.data.u16;
+            u16UavBatt2 = tel.data.u16;
             break;
         case FR_ID_LATLONG:
-            if( tel->d.data.u32 & 0x80000000 ){
-                fUavLon = (float)(tel->d.data.u32 & 0x3fffffff);
-                fUavLon /= 600000;
-                if( tel->d.data.u32 & 0x40000000 ){
-                    fUavLon = -fUavLon;
+            if( tel.data.u32 & 0x80000000 ){
+            	td->longitude = (float)(tel.data.u32 & 0x3fffffff);
+            	td->longitude /= 600000;
+                if( tel.data.u32 & 0x40000000 ){
+                	td->longitude = -td->longitude;
                     }
-                if( (u8HomeFix & 1) == 0 ){
+/*
+                  if( (u8HomeFix & 1) == 0 ){
                     if( u8UavFixType > 3 ){
                         fHomeLon = fUavLon;
                         u8HomeFix |= 1;
                         }
+*/
                     }
-//printf( "Lon: %x", tel->d.data.u32 );
+printf( "smartport LON: %x", tel.data.u32 );
                 }
             else{    
-                fUavLat = (float)(tel->d.data.u32 & 0x3fffffff);
+                fUavLat = (float)(tel.data.u32 & 0x3fffffff);
                 fUavLat /= 600000;
-                if( tel->d.data.u32 & 0x40000000 ){
+                if( tel.data.u32 & 0x40000000 ){
                     fUavLat = -fUavLat;
                 }
                 if( (u8HomeFix & 2) == 0 ){
@@ -108,20 +118,20 @@ void smartport_check(telemetry_data_t *td, tSPortData *tel)
                         u8HomeFix |= 2;
                         }
                     }
-//printf( " Lat: %x", tel->d.data.u32 );
+printf( "smartport LAT: %x", tel.data.u32 );
                 }            
             break;
         case FR_ID_GPS_ALT:
             // uint32_t , 100=1m
-            i16UavGpsAlt = (int16_t)( tel->d.data.i32 / 100 );
+            i16UavGpsAlt = (int16_t)( tel.data.i32 / 100 );
             break;
         case FR_ID_SPEED:
             // uint32_t , 2000=1kmh ???
-            u16UavGpsSpeed = (uint16_t)( tel->d.data.u32 / 2000 );
+            u16UavGpsSpeed = (uint16_t)( tel.data.u32 / 2000 );
             break;
         case FR_ID_GPS_COURSE:
             // uint32_t , // 10000 = 100 deg
-            u16UavGpsCourse = (uint16_t)( tel->d.data.u32 / 100 );
+            u16UavGpsCourse = (uint16_t)( tel.data.u32 / 100 );
             break;
         case FR_ID_T1:  // iNac, CF flight modes / arm
             u16Modes = tel->d.data.u16; // see inav smartport.c
@@ -129,42 +139,42 @@ void smartport_check(telemetry_data_t *td, tSPortData *tel)
 //printf( "T1: %x", tel->d.data.u32 );
             break;
         case FR_ID_T2:  // iNav, CF sat fix / home
-            u8UavFixType = (uint8_t)( tel->d.data.u32 / 1000 );
-            u8UavSatCnt = (uint8_t)( tel->d.data.u32 % 1000 );
+            u8UavFixType = (uint8_t)( tel.data.u32 / 1000 );
+            u8UavSatCnt = (uint8_t)( tel.data.u32 % 1000 );
             break;
         case FR_ID_GPS_SAT: // car ctrl sat fix
-            u8UavFixType = (uint8_t)( tel->d.data.u16 % 10 );
-            u8UavSatCnt = (uint8_t)( tel->d.data.u16 / 10 );
+            u8UavFixType = (uint8_t)( tel.data.u16 % 10 );
+            u8UavSatCnt = (uint8_t)( tel.data.u16 / 10 );
 //printf( "Sat: %x", tel->d.data.u32 );
             break;
         case FR_ID_RSSI:
-            u8UavRssi = tel->d.data.u8;
+            u8UavRssi = tel.data.u8;
 //printf( "RSSI: %x - %x", u8UavRssi, tel->d.data.u32 );
             break;
         case FR_ID_RXBATT:
-            u8UavRxBatt = tel->d.data.u8;
+            u8UavRxBatt = tel.data.u8;
             // factor is: 3.3 / 255 * 4 
 //printf( "Batt: %x - %x", u8UavRxBatt, tel->d.data.u32 );
             break;
         case FR_ID_SWR:
-            u8UavSWR = tel->d.data.u8; //???
+            u8UavSWR = tel.data.u8; //???
 //printf( "SWR: %x - %x", u8UavSWR, tel->d.data.u32 );
             break;
         case FR_ID_ADC1:
-            u8UavAdc1 = tel->d.data.u8;
+            u8UavAdc1 = tel.data.u8;
             // factor is: 3.3 / 255
             break; 
         case FR_ID_ADC2:
-            u8UavAdc2 = tel->d.data.u8;
+            u8UavAdc2 = tel.data.u8;
             // factor is: 3.3 / 255
             break; 
         case FR_ID_ALTITUDE:
             // uint32_t, from barometer, 100 = 1m
-            i16UavBaroAlt = (int16_t)( tel->d.data.i32 / 100 );
+            i16UavBaroAlt = (int16_t)( tel.data.i32 / 100 );
             break;
         case FR_ID_VARIO:
             // uint32_t , 100 = 1m/s
-            i16UavVario = (int16_t)( tel->d.data.i32 );
+            i16UavVario = (int16_t)( tel.data.i32 );
             break;
         case FR_ID_CURRENT:
         case FR_ID_CELLS:
@@ -181,7 +191,7 @@ void smartport_check(telemetry_data_t *td, tSPortData *tel)
         case FR_ID_FIRMWARE:
             break;
         default:
-        	printf( "Unknown SPORT: %x - %x", (uint16_t)tel->d.id, tel->d.data.u32 );
+        	printf( "smartport unknown id: %x - %x", (uint16_t)tel->d.id, tel->d.data.u32 );
             break;
         }
 }

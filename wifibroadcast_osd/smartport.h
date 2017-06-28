@@ -42,12 +42,10 @@ void smartport_check(telemetry_data_t *td, tSPortData *tel);
 #define FR_ID_FIRMWARE              0xF106  // used by the radio system
 
 
-#pragma pack(push, 1)
 typedef struct {
     int16_t id;
-    union{ uint32_t u32; int32_t i32; uint16_t u16; int16_t i16; uint8_t u8; int8_t i8; float f; } data;
+    union{ uint32_t u32; int32_t i32; uint16_t u16; int16_t i16; uint8_t u8; uint8_t b[4]; int8_t i8; float f; } data;
     uint8_t crc;
     } tSPortData;
-#pragma pack(pop)
  
 #endif
