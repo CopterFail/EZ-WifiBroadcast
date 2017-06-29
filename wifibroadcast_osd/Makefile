@@ -8,7 +8,7 @@ all: osd
 	gcc -c -o $@ $< $(CPPFLAGS)
  
 
-osd: /tmp/main.o /tmp/frsky.o /tmp/render.o /tmp/telemetry.o /tmp/ltm.o /tmp/mavlink.o tmp/smartport.o
+osd: /tmp/main.o /tmp/frsky.o /tmp/render.o /tmp/telemetry.o /tmp/ltm.o /tmp/mavlink.o /tmp/smartport.o
 	gcc -o /tmp/$@ $^ $(LDFLAGS)
 
 
