@@ -82,6 +82,14 @@ typedef struct {
 	uint8_t sats;
 	uint8_t fix;
 
+#if defined(SMARTPORT)
+	uint8_t rssi;
+	uint8_t swr;
+	float rx_batt;
+	float adc1;
+	float adc2;
+	float vario;
+#endif
 #if defined(LTM) || defined(MAVLINK)
 	int16_t roll, pitch;
 	uint8_t rssi;

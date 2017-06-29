@@ -67,7 +67,7 @@ uint8_t u8CheckCrcSPORT( uint8_t *b ) {
     }
     else
     {
-    	printf( "smartport crc fail (%x != %x)", (uint8_t)(0xFF-u16Crc), b[6] );
+    	printf( "\r\nsmartport crc fail (%d != %d)", (uint8_t)(0xFF-u16Crc), b[6] );
         return 0u;
     }
 }
@@ -90,8 +90,8 @@ void smartport_check(telemetry_data_t *td, uint8_t *b)
     switch( tel.id )
 	{
         case FR_ID_VFAS:
-            // uint32_t , 100=10V
-            td->voltage = (float)tel.data.u16 / 10.0;
+            // uint32_t , 100=1V
+            td->voltage = (float)tel.data.u16 / 100.0;
             printf( "\r\nsmartport FR_ID_VFAS is %f", td->voltage );
             break;
         case FR_ID_LATLONG:
@@ -150,34 +150,35 @@ void smartport_check(telemetry_data_t *td, uint8_t *b)
         case FR_ID_T2: // iNav, CF sat fix / home
             td->fix = (uint8_t)( tel.data.u32 / 1000 );
             td->sats = (uint8_t)( tel.data.u32 % 1000 );
-            printf( "\r\nsmartport FR_ID_T2" );
+            printf( "\r\nsmartport FR_ID_T2 ( %d / %d )", td->sats, td->fix );
             break;
         case FR_ID_GPS_SAT: // car ctrl sat fix
             td->fix = (uint8_t)( tel.data.u16 % 10 );
             td->sats = (uint8_t)( tel.data.u16 / 10 ); //printf( "Sat: %x", tel->d.data.u32 );
-            printf( "\r\nsmartport FR_ID_GPS_SAT" );
+            printf( "\r\nsmartport FR_ID_GPS_SAT ( %d / %d )", td->sats, td->fix );
             break;
         case FR_ID_RSSI:
-            //u8UavRssi = tel.data.u8; //printf( "RSSI: %x - %x", u8UavRssi, tel->d.data.u32 );
-            printf( "\r\nsmartport FR_ID_RSSI" );
+            td->rssi = (uint8_t)tel.data.u8; //printf( "RSSI: %x - %x", u8UavRssi, tel->d.data.u32 );
+            printf( "\r\nsmartport FR_ID_RSSI is %d", td->rssi );
             break;
         case FR_ID_RXBATT:
-            //u8UavRxBatt = tel.data.u8;
-            // factor is: 3.3 / 255 * 4 //printf( "Batt: %x - %x", u8UavRxBatt, tel->d.data.u32 );
-            printf( "\r\nsmartport FR_ID_RXBATT" );
+            td->rx_batt = (float)(tel.data.u8);
+            td->rx_batt *= 3.3 / 255.0 * 4.0;
+            printf( "\r\nsmartport FR_ID_RXBATT is %f", td->rx_batt );
             break;
         case FR_ID_SWR:
-            //u8UavSWR = tel.data.u8; //??? //printf( "SWR: %x - %x", u8UavSWR, tel->d.data.u32 );
-            printf( "\r\nsmartport FR_ID_SWR" );
+            td->swr = (uint8_t)(tel.data.u32);
+            printf( "\r\nsmartport FR_ID_SWR is %d", td->swr );
             break;
         case FR_ID_ADC1:
-            //u8UavAdc1 = tel.data.u8;
-            // factor is: 3.3 / 255
+            td->adc1 = (float)tel.data.u8;
+            td->adc1 *=  3.3 / 255.0;
+        	printf( "\r\nsmartport FR_ID_ADC1 is %f", td->adc1 );
             break;
         case FR_ID_ADC2:
-            //u8UavAdc2 = tel.data.u8;
-            // factor is: 3.3 / 255
-            printf( "\r\nsmartport FR_ID_ADC2" );
+            td->adc2 = (float)tel.data.u8;
+            td->adc2 = 3.3 / 255.0;
+            printf( "\r\nsmartport FR_ID_ADC2 is %f", td->adc2 );
             break;
         case FR_ID_ALTITUDE:
             // uint32_t, from barometer, 100 = 1m
@@ -186,20 +187,20 @@ void smartport_check(telemetry_data_t *td, uint8_t *b)
             break;
         case FR_ID_VARIO:
             // uint32_t , 100 = 1m/s
-            //i16UavVario = (int16_t)( tel.data.i32 );
-            printf( "\r\nsmartport FR_ID_VARIO" );
+            td->vario = (float)( tel.data.i32 ) / 100;
+            printf( "\r\nsmartport FR_ID_VARIO is %f", td->vario );
             break;
         case FR_ID_ACCX:
             td->x = tel.data.i16;
-            printf( "\r\nsmartport FR_ID_ACCX" );
+            printf( "\r\nsmartport FR_ID_ACCX is %d", td->x );
             break;
         case FR_ID_ACCY:
             td->y = tel.data.i16;
-            printf( "\r\nsmartport FR_ID_ACCY" );
+            printf( "\r\nsmartport FR_ID_ACCY is %d", td->y );
             break;
         case FR_ID_ACCZ:
             td->z = tel.data.i16;
-            printf( "\r\nsmartport FR_ID_ACCZ" );
+            printf( "\r\nsmartport FR_ID_ACCZ is %d", td->z );
             break;
         case FR_ID_CURRENT:
             td->ampere = (float)tel.data.u16 / 10.0;  // this is guessed

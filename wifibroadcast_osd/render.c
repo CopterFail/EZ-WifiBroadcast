@@ -126,7 +126,7 @@ void render(telemetry_data_t *td) {
 	}
 	#endif
 
-	#if defined(MAVLINK)
+	#if defined(MAVLINK) || defined(SMARTPORT)
 	// if satfix is reported by flightcontrol
 	if (td->fix > 2 && !home_set){
 		setting_home = true;
@@ -174,13 +174,13 @@ void render(telemetry_data_t *td) {
 	if (home_set)
 		#ifdef FRSKY
 		draw_home_distance((int)distance_between(home_lat, home_lon, (td->ns == 'N'? 1:-1) *td->latitude, (td->ns == 'E'? 1:-1) *td->longitude), getWidth(50), getHeight(5), scale_factor * 2.5);
-		#elif defined(LTM) || defined(MAVLINK)
+		#elif defined(LTM) || defined(MAVLINK) || defined(SMARTPORT)
                 draw_home_distance((int)distance_between(home_lat, home_lon, td->latitude, td->longitude), getWidth(50), getHeight(5), scale_factor * 2.5);
 		#endif
 #endif
 
 #ifdef HORIZON
-#if defined(FRSKY)
+#if defined(FRSKY) || defined(SMARTPORT)
 	float x_val, y_val, z_val;
     	x_val = td->x;
     	y_val = td->y;
@@ -608,7 +608,7 @@ void draw_position(float lat, float lon, bool fix, int sats, int fixtype, int po
 		sprintf(buffer, "No valid fix!");
 		Text(pos_x, pos_y + 80, buffer, SansTypeface, scale*.75f);
 	}else /* if (sats > 0)*/{
-		#if defined(LTM) || defined(MAVLINK)
+		#if defined(LTM) || defined(MAVLINK) || defined(SMARTPORT)
 		sprintf(buffer, "%d sats", sats);
 		Text(pos_x, pos_y + 80, buffer, SansTypeface, scale*.75f); 
 		#endif
